@@ -386,29 +386,77 @@ def generate_ai_analysis(url: str, categories: list, strengths: list,
 #  DATA COLLECTION FUNCTIONS
 # ─────────────────────────────────────────────────────────────
 
-def get_pagespeed_data(url: str) -> dict:
+def _parse_pagespeed_response(data: dict, prefix: str = "") -> dict:
+    """Extract all Lighthouse categories + CWV from a PageSpeed API response."""
+    lh     = data.get("lighthouseResult", {})
+    cats   = lh.get("categories", {})
+    audits = lh.get("audits", {})
+
+    def score(key: str) -> float:
+        return (cats.get(key, {}).get("score") or 0) * 100
+
+    p = prefix  # e.g. "mobile_" or "desktop_" or ""
+    return {
+        f"{p}lcp":                     audits.get("largest-contentful-paint", {}).get("numericValue"),
+        f"{p}fid":                     audits.get("max-potential-fid",        {}).get("numericValue"),
+        f"{p}cls":                     audits.get("cumulative-layout-shift",  {}).get("numericValue"),
+        f"{p}ttfb":                    audits.get("server-response-time",     {}).get("numericValue"),
+        f"{p}fcp":                     audits.get("first-contentful-paint",   {}).get("numericValue"),
+        f"{p}tbt":                     audits.get("total-blocking-time",      {}).get("numericValue"),
+        f"{p}si":                      audits.get("speed-index",              {}).get("numericValue"),
+        f"{p}performance_score":       score("performance"),
+        f"{p}lh_accessibility_score":  score("accessibility"),
+        f"{p}lh_best_practices_score": score("best-practices"),
+        f"{p}lh_pwa_score":            score("pwa"),
+        f"{p}lh_seo_score":            score("seo"),
+        f"{p}dom_size":                audits.get("dom-size",          {}).get("numericValue"),
+        f"{p}request_count":           audits.get("network-requests",  {}).get("numericValue"),
+        f"{p}page_size":               audits.get("total-byte-weight", {}).get("numericValue"),
+    }
+
+
+def _fetch_pagespeed(url: str, strategy: str) -> dict:
+    """Call PageSpeed API for one strategy. Returns raw parsed dict."""
     try:
         r = requests.get(config.PAGESPEED_API, params={
-            "url": url, "key": config.PAGESPEED_API_KEY, "strategy": "mobile"
-        }, timeout=10)
-        if r.status_code != 200:
-            return {}
-        lh     = r.json().get("lighthouseResult", {})
-        cats   = lh.get("categories", {})
-        audits = lh.get("audits", {})
-        return {
-            "lcp":              audits.get("largest-contentful-paint", {}).get("numericValue"),
-            "fid":              audits.get("max-potential-fid",        {}).get("numericValue"),
-            "cls":              audits.get("cumulative-layout-shift",  {}).get("numericValue"),
-            "ttfb":             audits.get("server-response-time",     {}).get("numericValue"),
-            "fcp":              audits.get("first-contentful-paint",   {}).get("numericValue"),
-            "performance_score": (cats.get("performance", {}).get("score", 0.5) or 0) * 100,
-            "dom_size":         audits.get("dom-size",          {}).get("numericValue"),
-            "request_count":    audits.get("network-requests",  {}).get("numericValue"),
-            "page_size":        audits.get("total-byte-weight", {}).get("numericValue"),
-        }
+            "url": url, "key": config.PAGESPEED_API_KEY, "strategy": strategy,
+        }, timeout=20)
+        if r.status_code == 200:
+            return _parse_pagespeed_response(r.json())
     except Exception:
-        return {}
+        pass
+    return {}
+
+
+def get_pagespeed_data(url: str) -> dict:
+    """
+    Fetch PageSpeed for both mobile and desktop in parallel.
+    Returns:
+      - Unprefixed keys (mobile values) for backward-compat scoring
+      - mobile_* and desktop_* prefixed keys for the split display
+      - mobile_desktop_gap: abs difference in performance scores
+    """
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
+        f_mob  = ex.submit(_fetch_pagespeed, url, "mobile")
+        f_desk = ex.submit(_fetch_pagespeed, url, "desktop")
+        mob    = f_mob.result()
+        desk   = f_desk.result()
+
+    # Prefix each strategy
+    mob_prefixed  = {f"mobile_{k}":  v for k, v in mob.items()}
+    desk_prefixed = {f"desktop_{k}": v for k, v in desk.items()}
+
+    # Gap between mobile and desktop performance scores
+    mob_perf  = mob.get("performance_score", 0) or 0
+    desk_perf = desk.get("performance_score", 0) or 0
+    gap       = abs(desk_perf - mob_perf)
+
+    return {
+        **mob,            # unprefixed = mobile (used for main scoring)
+        **mob_prefixed,
+        **desk_prefixed,
+        "mobile_desktop_gap": gap,
+    }
 
 
 def get_safe_browsing_data(url: str) -> dict:
@@ -518,6 +566,103 @@ def get_dns_data(domain: str) -> dict:
         return {"dns_time_ms": int((time.time() - t) * 1000)}
     except Exception:
         return {"dns_time_ms": 100}
+
+
+def get_broken_links(url: str) -> dict:
+    """
+    Crawl the page, extract all <a href> links, and probe each one.
+    Returns a summary dict plus a raw list of broken links for the frontend.
+    Capped at 60 links to keep runtime reasonable.
+    """
+    if not BS_AVAILABLE:
+        return {}
+    try:
+        r = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+        if r.status_code != 200:
+            return {}
+
+        soup  = BeautifulSoup(r.text, "html.parser")
+        base  = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
+        seen  = set()
+        to_check = []
+
+        for tag in soup.find_all("a", href=True):
+            href = tag["href"].strip()
+            if not href or href.startswith(("#", "mailto:", "tel:", "javascript:")):
+                continue
+            if href.startswith("//"):
+                href = "https:" + href
+            elif href.startswith("/"):
+                href = base + href
+            elif not href.startswith("http"):
+                href = base + "/" + href
+            if href not in seen:
+                seen.add(href)
+                to_check.append(href)
+
+        to_check = to_check[:60]
+
+        def check_link(link_url: str) -> dict:
+            try:
+                resp = requests.head(link_url, timeout=6, allow_redirects=True,
+                                     headers={"User-Agent": "Mozilla/5.0"})
+                if resp.status_code == 405:  # HEAD not allowed, fall back to GET
+                    resp = requests.get(link_url, timeout=6, allow_redirects=True,
+                                        headers={"User-Agent": "Mozilla/5.0"}, stream=True)
+                status = resp.status_code
+            except Exception:
+                status = 0  # unreachable
+            return {"url": link_url, "status": status, "broken": status == 0 or status >= 400}
+
+        link_results = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as ex:
+            futures = {ex.submit(check_link, lnk): lnk for lnk in to_check}
+            for fut in concurrent.futures.as_completed(futures, timeout=25):
+                try:
+                    link_results.append(fut.result())
+                except Exception:
+                    pass
+
+        broken = [lr for lr in link_results if lr["broken"]]
+        return {
+            "_broken_links":        broken,
+            "_total_links_checked": len(link_results),
+            "broken_links_count":   len(broken),
+        }
+    except Exception:
+        return {}
+
+
+def get_carbon_data(url: str) -> dict:
+    """
+    Estimate CO₂ per page view via the Website Carbon API (free, no key needed).
+    https://api.websitecarbon.com
+    """
+    try:
+        r = requests.get(
+            "https://api.websitecarbon.com/site",
+            params={"url": url},
+            timeout=12,
+        )
+        if r.status_code != 200:
+            return {}
+        data    = r.json()
+        grams   = (data.get("statistics", {})
+                       .get("co2", {})
+                       .get("grid", {})
+                       .get("grams"))
+        cleaner = data.get("cleanerThan")   # 0.0–1.0 percentile
+        rating  = data.get("rating", "?")   # A–F
+        if grams is None:
+            return {}
+        return {
+            "carbon_grams":        round(float(grams), 4),
+            "carbon_cleaner_than": int((cleaner or 0) * 100),
+            "carbon_rating":       rating,
+            "_carbon_raw":         data,
+        }
+    except Exception:
+        return {}
 
 
 def _check_url(base: str, path: str) -> int:
@@ -706,20 +851,35 @@ CATEGORY_KEYS = {
                        "heading_structure", "alt_text_present", "alt_text_quality",
                        "form_labels", "color_contrast", "focus_visible", "aria_roles",
                        "aria_labels", "video_captions", "audio_transcripts",
-                       "table_headers", "table_caption"],
+                       "table_headers", "table_caption",
+                       "lh_accessibility_score"],                 # ← Lighthouse
     "Business":       ["contact_info", "cta_count", "cta_visibility", "privacy_policy",
                        "terms_of_service", "about_page", "social_links", "trust_badges",
                        "testimonials", "pricing_visible", "faq_page", "blog_present",
                        "newsletter", "live_chat", "return_policy"],
+    "Lighthouse":     ["lh_accessibility_score", "lh_best_practices_score",
+                       "lh_pwa_score", "lh_seo_score"],           # ← new category
+    "Green":          ["carbon_grams", "carbon_cleaner_than"],    # ← new category
 }
 
 CATEGORY_ICONS = {
     "Performance": "⚡", "Security": "🔒", "Safety": "🛡️",
-    "Infrastructure": "🌐", "SEO": "📈", "Accessibility": "♿", "Business": "💰",
+    "Infrastructure": "🌐", "SEO": "📈", "Accessibility": "♿",
+    "Business": "💰", "Lighthouse": "🏠", "Green": "🌿",
 }
 
 # Default score for safety items is 100 (assume clean until proven otherwise)
 SAFETY_DEFAULTS = {k: 100 for k in CATEGORY_KEYS["Safety"]}
+
+
+# ── Core Web Vitals history store  (url_hash → list of snapshots) ──
+cwv_history: dict = {}
+
+
+@app.route("/api/vitals-history/<url_hash>")
+def vitals_history(url_hash: str):
+    """Return stored Core Web Vitals history for a URL (identified by its MD5 hash)."""
+    return jsonify({"history": cwv_history.get(url_hash, [])})
 
 
 @app.route("/api/audit", methods=["POST"])
@@ -732,38 +892,47 @@ def audit():
         if not url.startswith(("http://", "https://")):
             url = "https://" + url
 
-        domain = urlparse(url).netloc
+        domain   = urlparse(url).netloc
+        url_hash = hashlib.md5(url.encode()).hexdigest()[:12]
 
-        # Run all checks in parallel
-        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
-            f_ps  = ex.submit(get_pagespeed_data,  url)
-            f_sb  = ex.submit(get_safe_browsing_data, url)
-            f_ssl = ex.submit(get_ssl_data,        url)
-            f_hdr = ex.submit(get_headers_data,    url)
-            f_srv = ex.submit(get_server_data,     url)
-            f_dns = ex.submit(get_dns_data,        domain)
-            f_html= ex.submit(analyze_html,        url)
+        # Run all checks in parallel (9 workers now)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=12) as ex:
+            f_ps     = ex.submit(get_pagespeed_data,    url)   # mobile + desktop
+            f_sb     = ex.submit(get_safe_browsing_data, url)
+            f_ssl    = ex.submit(get_ssl_data,           url)
+            f_hdr    = ex.submit(get_headers_data,       url)
+            f_srv    = ex.submit(get_server_data,        url)
+            f_dns    = ex.submit(get_dns_data,           domain)
+            f_html   = ex.submit(analyze_html,           url)
+            f_links  = ex.submit(get_broken_links,       url)   # ← new
+            f_carbon = ex.submit(get_carbon_data,        url)   # ← new
 
             raw = {
-                **f_ps.result(timeout=15),
-                **SAFETY_DEFAULTS,           # defaults for safety (overwritten by SB below)
-                **f_sb.result(timeout=6),
-                **f_ssl.result(timeout=6),
-                **f_hdr.result(timeout=6),
-                **f_srv.result(timeout=6),
-                **f_dns.result(timeout=6),
-                **f_html.result(timeout=10),
+                **f_ps.result(timeout=45),     # mobile+desktop takes longer
+                **SAFETY_DEFAULTS,
+                **f_sb.result(timeout=8),
+                **f_ssl.result(timeout=8),
+                **f_hdr.result(timeout=8),
+                **f_srv.result(timeout=8),
+                **f_dns.result(timeout=8),
+                **f_html.result(timeout=12),
+                **f_links.result(timeout=30),  # ← new
+                **f_carbon.result(timeout=15), # ← new
             }
 
-        html_content = raw.pop("_html_content", "")
+        # Pull out raw passthrough data (not scored)
+        broken_links        = raw.pop("_broken_links", [])
+        total_links_checked = raw.pop("_total_links_checked", 0)
+        carbon_raw          = raw.pop("_carbon_raw", {})
+        html_content        = raw.pop("_html_content", "")
 
         # Normalize all raw values to 0-100
-        items = {k: normalize_value(v, k) for k, v in raw.items()}
+        items = {k: normalize_value(v, k) for k, v in raw.items() if v is not None}
 
         # Build category scores
         categories = []
         for name, keys in CATEGORY_KEYS.items():
-            scores = [items.get(k, 50) for k in keys if k in items]
+            scores = [items[k] for k in keys if k in items]
             avg    = int(sum(scores) / len(scores)) if scores else 50
             categories.append({
                 "name":  name,
@@ -780,38 +949,96 @@ def audit():
         priority_items = sorted(
             [
                 {
-                    "name":    ANALYSIS_DB[k].get("name", k),
-                    "score":   v,
-                    "priority":ANALYSIS_DB[k].get("priority", "medium"),
-                    "action":  ANALYSIS_DB[k].get("action", "Needs attention"),
-                    "details": ANALYSIS_DB[k].get("details", ""),
-                    "impact":  ANALYSIS_DB[k].get("impact", ""),
-                    "time":    ANALYSIS_DB[k].get("time", "Unknown"),
-                    "effort":  ANALYSIS_DB[k].get("effort", "medium"),
+                    "name":     ANALYSIS_DB[k].get("name", k),
+                    "score":    v,
+                    "priority": ANALYSIS_DB[k].get("priority", "medium"),
+                    "action":   ANALYSIS_DB[k].get("action", "Needs attention"),
+                    "details":  ANALYSIS_DB[k].get("details", ""),
+                    "impact":   ANALYSIS_DB[k].get("impact", ""),
+                    "time":     ANALYSIS_DB[k].get("time", "Unknown"),
+                    "effort":   ANALYSIS_DB[k].get("effort", "medium"),
                 }
                 for k, v in items.items()
-                if k in ANALYSIS_DB and ANALYSIS_DB[k].get("priority") in ("critical", "high") and v < 50
+                if k in ANALYSIS_DB
+                   and ANALYSIS_DB[k].get("priority") in ("critical", "high")
+                   and v < 50
             ],
             key=lambda x: (x["priority"] != "critical", x["score"]),
         )[:7]
 
         ai_text = generate_ai_analysis(url, categories, strengths, weaknesses, priority_items)
 
+        # ── Store Core Web Vitals snapshot for history chart ────────
+        cwv_snapshot = {
+            "timestamp": datetime.now().isoformat(),
+            "lcp":       raw.get("lcp"),
+            "cls":       raw.get("cls"),
+            "fid":       raw.get("fid"),
+            "fcp":       raw.get("fcp"),
+            "ttfb":      raw.get("ttfb"),
+            "mobile_performance_score":  raw.get("mobile_performance_score"),
+            "desktop_performance_score": raw.get("desktop_performance_score"),
+        }
+        if url_hash not in cwv_history:
+            cwv_history[url_hash] = []
+        cwv_history[url_hash].append(cwv_snapshot)
+        cwv_history[url_hash] = cwv_history[url_hash][-30:]  # keep last 30 scans
+
+        # ── Mobile vs Desktop comparison ────────────────────────────
+        mobile_desktop = {
+            "mobile_performance":  items.get("mobile_performance_score"),
+            "desktop_performance": items.get("desktop_performance_score"),
+            "gap":                 items.get("mobile_desktop_gap"),
+            "mobile_lcp":          raw.get("mobile_lcp"),
+            "desktop_lcp":         raw.get("desktop_lcp"),
+            "mobile_cls":          raw.get("mobile_cls"),
+            "desktop_cls":         raw.get("desktop_cls"),
+            "mobile_fcp":          raw.get("mobile_fcp"),
+            "desktop_fcp":         raw.get("desktop_fcp"),
+        }
+
+        # ── Lighthouse full category scores ─────────────────────────
+        lighthouse = {
+            "performance":    items.get("performance_score"),
+            "accessibility":  items.get("lh_accessibility_score"),
+            "best_practices": items.get("lh_best_practices_score"),
+            "pwa":            items.get("lh_pwa_score"),
+            "seo":            items.get("lh_seo_score"),
+        }
+
+        # ── Carbon ──────────────────────────────────────────────────
+        carbon = {
+            "grams":       raw.get("carbon_grams"),
+            "cleaner_than":raw.get("carbon_cleaner_than"),
+            "rating":      raw.get("carbon_rating"),
+        }
+
         result = {
-            "url":              url,
-            "timestamp":        datetime.now().isoformat(),
-            "session_id":       hashlib.md5(f"{url}{datetime.now()}".encode()).hexdigest()[:8],
-            "overall":          overall,
-            "items":            items,
-            "analysis_db":      ANALYSIS_DB,
-            "ai_analysis":      ai_text,
-            "categories":       categories,
-            "strengths":        strengths,
-            "weaknesses":       weaknesses,
-            "priority_items":   priority_items,
-            "item_count":       len(items),
-            "estimated_roi":    int((100 - categories[0]["score"]) * 0.3 +
-                                    (100 - next(c["score"] for c in categories if c["name"] == "SEO")) * 0.4),
+            "url":               url,
+            "url_hash":          url_hash,
+            "timestamp":         datetime.now().isoformat(),
+            "session_id":        hashlib.md5(f"{url}{datetime.now()}".encode()).hexdigest()[:8],
+            "overall":           overall,
+            "items":             items,
+            "analysis_db":       ANALYSIS_DB,
+            "ai_analysis":       ai_text,
+            "categories":        categories,
+            "strengths":         strengths,
+            "weaknesses":        weaknesses,
+            "priority_items":    priority_items,
+            "item_count":        len(items),
+            "estimated_roi":     int(
+                (100 - categories[0]["score"]) * 0.3 +
+                (100 - next((c["score"] for c in categories if c["name"] == "SEO"), 50)) * 0.4
+            ),
+            # ── New feature data ────────────────────────────────────
+            "mobile_desktop":    mobile_desktop,
+            "lighthouse":        lighthouse,
+            "broken_links":      broken_links,
+            "broken_links_count":len(broken_links),
+            "total_links_checked":total_links_checked,
+            "carbon":            carbon,
+            "cwv_history_key":   url_hash,  # use with /api/vitals-history/<url_hash>
         }
 
         # Persist to user history
@@ -820,6 +1047,7 @@ def audit():
             _init_user(email)
             user_data[email]["history"].append({
                 "url":           url,
+                "url_hash":      url_hash,
                 "timestamp":     result["timestamp"],
                 "overall":       overall,
                 "session_id":    result["session_id"],

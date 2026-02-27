@@ -689,4 +689,102 @@ ANALYSIS_DB = {
         "category": "business", "priority": "medium",
         "action": "Ensure your main CTA is visible without scrolling.", "effort": "low", "time": "1-2 hours",
     },
+
+    # ── Lighthouse Full Categories ────────────────────────────
+    "lh_accessibility_score": {
+        "name": "Lighthouse Accessibility", "description": "Lighthouse accessibility audit score",
+        "details": "Automated accessibility checks from Lighthouse covering ARIA, contrast, labels, and more.",
+        "impact": "Low score means users with disabilities cannot use your site.",
+        "range": "Good: > 90 | Poor: < 50",
+        "threshold_good": 90, "threshold_poor": 50,
+        "category": "accessibility", "priority": "high",
+        "action": "Fix issues listed in the Lighthouse accessibility report.", "effort": "medium", "time": "4-8 hours",
+    },
+    "lh_best_practices_score": {
+        "name": "Lighthouse Best Practices", "description": "Lighthouse best practices score",
+        "details": "Checks for HTTPS, modern APIs, browser errors, and security best practices.",
+        "impact": "Low score indicates technical debt and potential security risks.",
+        "range": "Good: > 90 | Poor: < 50",
+        "threshold_good": 90, "threshold_poor": 50,
+        "category": "lighthouse", "priority": "high",
+        "action": "Review and fix issues in the Lighthouse best practices audit.", "effort": "medium", "time": "2-6 hours",
+    },
+    "lh_pwa_score": {
+        "name": "Lighthouse PWA Score", "description": "Progressive Web App readiness",
+        "details": "How well the site meets PWA standards — offline support, manifest, service worker.",
+        "impact": "PWA features enable add-to-homescreen, offline mode, and push notifications.",
+        "range": "Good: > 90 | Poor: < 50",
+        "threshold_good": 90, "threshold_poor": 50,
+        "category": "lighthouse", "priority": "medium",
+        "action": "Add a web app manifest, service worker, and HTTPS to improve PWA score.", "effort": "high", "time": "8-16 hours",
+    },
+    "lh_seo_score": {
+        "name": "Lighthouse SEO Score", "description": "Lighthouse SEO audit score",
+        "details": "Lighthouse checks for crawlability, mobile-friendliness, and meta tags.",
+        "impact": "Low score directly reduces search engine visibility.",
+        "range": "Good: > 90 | Poor: < 50",
+        "threshold_good": 90, "threshold_poor": 50,
+        "category": "seo", "priority": "high",
+        "action": "Fix all issues flagged in the Lighthouse SEO audit.", "effort": "low", "time": "1-3 hours",
+    },
+
+    # ── Mobile vs Desktop ─────────────────────────────────────
+    "mobile_performance_score": {
+        "name": "Mobile Performance Score", "description": "PageSpeed score on mobile",
+        "details": "Composite performance score measured on a simulated mobile device.",
+        "impact": "Over 60% of web traffic is mobile — poor mobile scores lose users.",
+        "range": "Good: > 90 | Poor: < 50",
+        "threshold_good": 90, "threshold_poor": 50,
+        "category": "performance", "priority": "critical",
+        "action": "Optimise images, reduce JavaScript, and use lazy loading for mobile.", "effort": "medium", "time": "4-8 hours",
+    },
+    "desktop_performance_score": {
+        "name": "Desktop Performance Score", "description": "PageSpeed score on desktop",
+        "details": "Composite performance score measured on a simulated desktop device.",
+        "impact": "Desktop users expect near-instant load times.",
+        "range": "Good: > 90 | Poor: < 50",
+        "threshold_good": 90, "threshold_poor": 50,
+        "category": "performance", "priority": "high",
+        "action": "Reduce render-blocking resources and optimise server response time.", "effort": "medium", "time": "2-4 hours",
+    },
+    "mobile_desktop_gap": {
+        "name": "Mobile/Desktop Score Gap", "description": "Performance gap between mobile and desktop",
+        "details": "Absolute difference in performance scores between mobile and desktop.",
+        "impact": "A large gap means mobile users get a significantly worse experience.",
+        "range": "Good: < 10 points | Poor: > 30 points",
+        "threshold_good": 10, "threshold_poor": 30,
+        "category": "performance", "priority": "high",
+        "action": "Identify mobile-specific bottlenecks using the mobile Lighthouse report.", "effort": "medium", "time": "3-6 hours",
+    },
+
+    # ── Broken Links ──────────────────────────────────────────
+    "broken_links_count": {
+        "name": "Broken Links", "description": "Number of broken links on the page",
+        "details": "Count of internal and external links returning 4xx/5xx or timing out.",
+        "impact": "Broken links hurt SEO, damage credibility, and frustrate users.",
+        "range": "Good: 0 | Poor: > 5",
+        "threshold_good": 0, "threshold_poor": 5,
+        "category": "seo", "priority": "high",
+        "action": "Fix or remove all broken links found in the report.", "effort": "medium", "time": "1-3 hours",
+    },
+
+    # ── Carbon / Green ────────────────────────────────────────
+    "carbon_grams": {
+        "name": "CO₂ Per Page View", "description": "Estimated carbon emissions per visit",
+        "details": "Grams of CO₂ produced per page view, estimated from page weight and energy mix.",
+        "impact": "High carbon sites are increasingly penalised by eco-conscious users and regulations.",
+        "range": "Good: < 0.5g | Poor: > 2g",
+        "threshold_good": 0.5, "threshold_poor": 2.0,
+        "category": "green", "priority": "medium",
+        "action": "Reduce page weight, use green hosting, optimise images and fonts.", "effort": "medium", "time": "2-8 hours",
+    },
+    "carbon_cleaner_than": {
+        "name": "Cleaner Than % of Web", "description": "Percentile vs all tested websites",
+        "details": "What percentage of websites this site is cleaner than, per Website Carbon API.",
+        "impact": "Shows relative environmental performance vs the broader web.",
+        "range": "Good: > 75% | Poor: < 25%",
+        "threshold_good": 75, "threshold_poor": 25,
+        "category": "green", "priority": "low",
+        "action": "Reduce page size and switch to a green hosting provider.", "effort": "medium", "time": "varies",
+    },
 }
