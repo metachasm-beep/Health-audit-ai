@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HEALTH AUDIT · ULTIMATE</title>
+    <style>
+        :root {
+            --primary: #8B5CF6;
+            --primary-glow: rgba(139, 92, 246, 0.5);
+            --secondary: #06b6d4;
+            --accent: #f43f5e;
+            --bg-primary: #0A0A0C;
+            --bg-secondary: rgba(18, 18, 22, 0.8);
+            --text-primary: #F5F5F7;
+            --text-secondary: #8E8E93;
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --neon-glow: 0 0 10px var(--primary-glow), 0 0 20px var(--primary-glow);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('{{ background_image }}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: -2;
+        }
+
+        body::after {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: linear-gradient(rgba(139, 92, 246, 0.03) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(139, 92, 246, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            width: 80px;
+            background: rgba(10, 10, 12, 0.9);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            transition: width 0.3s;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .sidebar:hover { width: 280px; }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            white-space: nowrap;
+        }
+
+        .sidebar-logo {
+            min-width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: var(--neon-glow);
+        }
+
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .sidebar:hover .sidebar-title { opacity: 1; }
+
+        .sidebar-nav { padding: 20px 0; }
+
+        .sidebar-item {
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .sidebar-item:hover {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--primary);
+            border-left-color: var(--primary);
+        }
+
+        .sidebar-item.active {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--primary);
+            border-left-color: var(--primary);
+        }
+
+        .sidebar-icon { min-width: 24px; font-size: 20px; }
+        .sidebar-label { font-size: 14px; opacity: 0; transition: opacity 0.2s; }
+        .sidebar:hover .sidebar-label { opacity: 1; }
+
+        .user-section {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            padding: 20px;
+            border-top: 1px solid var(--glass-border);
+            white-space: nowrap;
+        }
+
+        .user-info { display: flex; align-items: center; gap: 15px; }
+
+        .user-avatar {
+            min-width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--primary);
+            overflow: hidden;
+        }
+
+        .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        .user-details { opacity: 0; transition: opacity 0.2s; }
+        .sidebar:hover .user-details { opacity: 1; }
+
+        .user-name { font-size: 14px; font-weight: 600; }
+        .user-email { font-size: 12px; color: var(--text-secondary); }
+
+        .main-content {
+            margin-left: 80px;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 60px;
+            margin-bottom: 2rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .auth-btn {
+            padding: 0.5rem 1.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: var(--neon-glow);
+        }
+
+        .auth-btn:hover { transform: translateY(-2px); }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 40px;
+        }
+
+        .profile-pic {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+        }
+
+        .url-card {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 40px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            background: rgba(28, 28, 30, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 40px;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn:hover { transform: translateY(-2px); box-shadow: var(--neon-glow); }
+
+        .api-status-bar {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-bottom: 1rem;
+            font-size: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .api-status {
+            padding: 0.2rem 0.5rem;
+            border-radius: 20px;
+            background: rgba(0,0,0,0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-operational { background: #30D158; box-shadow: 0 0 10px #30D158; }
+        .status-degraded { background: #FFD60A; box-shadow: 0 0 10px #FFD60A; }
+        .status-down { background: #FF453A; box-shadow: 0 0 10px #FF453A; }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .feature-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: var(--neon-glow);
+        }
+
+        .feature-card h3 {
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .score-card {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--glass-border);
+            border-radius: 40px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .score-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            background: rgba(28, 28, 30, 0.8);
+            box-shadow: var(--neon-glow);
+        }
+
+        .priority-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--glass-border);
+            border-radius: 40px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .priority-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .priority-item {
+            background: rgba(28, 28, 30, 0.8);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.2rem;
+            transition: all 0.3s;
+            cursor: help;
+        }
+
+        .priority-item:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: var(--neon-glow);
+        }
+
+        .priority-critical { border-left: 4px solid #FF453A; }
+        .priority-high { border-left: 4px solid #FFD60A; }
+        .priority-medium { border-left: 4px solid var(--primary); }
+
+        .budget-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .budget-item {
+            background: rgba(28,28,30,0.8);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1rem;
+        }
+
+        .budget-pass { color: #30D158; }
+        .budget-fail { color: #FF453A; }
+
+        .ai-card {
+            background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05));
+            border: 1px solid rgba(139,92,246,0.3);
+            border-radius: 40px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .ai-content { white-space: pre-wrap; line-height: 1.8; }
+
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .category-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .category-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: var(--neon-glow);
+        }
+
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .category-header h3 {
+            font-size: 1.3rem;
+        }
+
+        .category-count {
+            background: rgba(139,92,246,0.2);
+            padding: 0.2rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--primary);
+        }
+
+        .category-score { font-size: 2rem; margin: 1rem 0; }
+        .category-score small { font-size: 1rem; color: var(--text-secondary); }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(44,44,46,0.8);
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s;
+        }
+
+        .category-items-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .item-pill {
+            background: rgba(28,28,30,0.8);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            border: 1px solid var(--glass-border);
+        }
+
+        .action-bar {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        [data-tooltip] { position: relative; cursor: help; }
+
+        [data-tooltip]:before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            padding: 1rem;
+            background: rgba(18, 18, 22, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--primary);
+            border-radius: 15px;
+            font-size: 0.9rem;
+            color: white;
+            text-align: left;
+            white-space: pre-line;
+            z-index: 4000;
+            margin-bottom: 10px;
+            opacity: 0;
+            visibility: hidden;
+            box-shadow: var(--glass-shadow), var(--neon-glow);
+            pointer-events: none;
+            line-height: 1.6;
+        }
+
+        [data-tooltip]:hover:before {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .detail-modal, .history-modal, .feature-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .detail-modal.active, .history-modal.active, .feature-modal.active { display: flex; }
+
+        .detail-content, .history-content, .feature-content {
+            background: rgba(18, 18, 22, 0.95);
+            backdrop-filter: blur(20px);
+            max-width: 1000px;
+            width: 95%;
+            border: 1px solid var(--glass-border);
+            border-radius: 40px;
+            padding: 2rem;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .detail-close {
+            float: right;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .detail-close:hover { color: var(--accent); }
+
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .item-card {
+            background: rgba(28,28,30,0.8);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.2rem;
+            cursor: help;
+            transition: all 0.2s;
+        }
+
+        .item-card:hover {
+            border-color: var(--primary);
+            transform: translateX(2px);
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .item-name { font-weight: 600; }
+        .good { color: #30D158; }
+        .warning { color: #FFD60A; }
+        .poor { color: #FF453A; }
+
+        .item-description {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .history-item {
+            padding: 1rem;
+            background: rgba(28,28,30,0.6);
+            border-radius: 20px;
+            margin-bottom: 1rem;
+            border: 1px solid var(--glass-border);
+        }
+
+        .history-item:hover { border-color: var(--primary); }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(139,92,246,0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 0; }
+            .sidebar:hover { width: 240px; }
+            .main-content { margin-left: 0; }
+            .input-group { flex-direction: column; }
+            .score-card { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">HA</div>
+            <span class="sidebar-title">HEALTH AUDIT</span>
+        </div>
+
+        <div class="sidebar-nav">
+            <div class="sidebar-item active" onclick="switchTab('audit')">
+                <span class="sidebar-icon">🔍</span>
+                <span class="sidebar-label">Audit</span>
+            </div>
+            <div class="sidebar-item" onclick="showHistoryModal()">
+                <span class="sidebar-icon">📊</span>
+                <span class="sidebar-label">History</span>
+            </div>
+            <div class="sidebar-item" onclick="showAlertsModal()">
+                <span class="sidebar-icon">🔔</span>
+                <span class="sidebar-label">Alerts</span>
+            </div>
+        </div>
+
+        <div class="user-section">
+            <div class="user-info">
+                <div class="user-avatar" id="sidebarAvatar">👤</div>
+                <div class="user-details">
+                    <div class="user-name" id="sidebarName">Guest</div>
+                    <div class="user-email" id="sidebarEmail">Sign in</div>
+                    <button class="auth-btn" style="margin-top: 10px; width: 100%;" onclick="handleAuth()" id="sidebarAuthBtn">Sign In</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="container">
+            <div class="header">
+                <div class="logo">HEALTH AUDIT · 115+ CHECKS</div>
+                <div class="auth-section" id="authDisplay"></div>
+            </div>
+
+            <div class="api-status-bar" id="apiStatusBar"></div>
+
+            <div id="audit-tab">
+                <div class="url-card">
+                    <h2 style="color: var(--text-secondary);">Enter website URL for comprehensive analysis</h2>
+                    <div class="input-group">
+                        <input type="url" id="url" value="https://example.com" placeholder="https://yourwebsite.com">
+                        <button class="btn" onclick="startAudit()" id="auditBtn">Analyze</button>
+                    </div>
+                    <div id="status" style="margin-top: 1rem; color: var(--text-secondary);"></div>
+                </div>
+
+                <!-- Advanced Features Grid -->
+                <div class="feature-grid">
+                    <div class="feature-card" onclick="showFeature('performance')">
+                        <h3>📈 Performance Timeline</h3>
+                        <p>Track performance trends over time</p>
+                    </div>
+                    <div class="feature-card" onclick="showFeature('security')">
+                        <h3>🔒 Security Scanner</h3>
+                        <p>Deep security vulnerability scan</p>
+                    </div>
+                    <div class="feature-card" onclick="showFeature('seo')">
+                        <h3>🎯 SEO Optimizer</h3>
+                        <p>AI-powered SEO recommendations</p>
+                    </div>
+                    <div class="feature-card" onclick="showFeature('accessibility')">
+                        <h3>♿ Accessibility Checker</h3>
+                        <p>WCAG compliance audit</p>
+                    </div>
+                    <div class="feature-card" onclick="showFeature('business')">
+                        <h3>💼 Business Intelligence</h3>
+                        <p>Conversion & ROI insights</p>
+                    </div>
+                    <div class="feature-card" onclick="showFeature('alerts')">
+                        <h3>🔔 Custom Alerts</h3>
+                        <p>Monitor changes over time</p>
+                    </div>
+                </div>
+
+                <div id="results" style="display: none;"></div>
+            </div>
+
+            <!-- History Modal -->
+            <div class="history-modal" id="historyModal">
+                <div class="history-content">
+                    <span class="detail-close" onclick="closeHistoryModal()">&times;</span>
+                    <h2 style="margin-bottom: 1.5rem;">Audit History</h2>
+                    <div id="historyList"></div>
+                </div>
+            </div>
+
+            <!-- Alerts Modal -->
+            <div class="history-modal" id="alertsModal">
+                <div class="history-content">
+                    <span class="detail-close" onclick="closeAlertsModal()">&times;</span>
+                    <h2 style="margin-bottom: 1.5rem;">Custom Alerts</h2>
+                    <div id="alertsList"></div>
+                    <div style="margin-top: 1rem;">
+                        <h3>Create New Alert</h3>
+                        <input type="url" id="alertUrl" placeholder="URL to monitor" style="width: 100%; padding: 0.8rem; margin: 0.5rem 0; background: rgba(28,28,30,0.8); border: 1px solid var(--glass-border); border-radius: 20px; color: white;">
+                        <select id="alertCondition" style="width: 100%; padding: 0.8rem; margin: 0.5rem 0; background: rgba(28,28,30,0.8); border: 1px solid var(--glass-border); border-radius: 20px; color: white;">
+                            <option value="score_below">Overall Score Below</option>
+                            <option value="score_above">Overall Score Above</option>
+                            <option value="performance_below">Performance Score Below</option>
+                            <option value="security_below">Security Score Below</option>
+                        </select>
+                        <input type="number" id="alertThreshold" placeholder="Threshold (0-100)" min="0" max="100" style="width: 100%; padding: 0.8rem; margin: 0.5rem 0; background: rgba(28,28,30,0.8); border: 1px solid var(--glass-border); border-radius: 20px; color: white;">
+                        <button class="btn" onclick="createAlert()" style="width: 100%;">Create Alert</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature Modal -->
+            <div class="feature-modal" id="featureModal">
+                <div class="feature-content">
+                    <span class="detail-close" onclick="closeFeatureModal()">&times;</span>
+                    <div id="featureContent"></div>
+                </div>
+            </div>
+
+            <!-- Detail Modal -->
+            <div class="detail-modal" id="detailModal">
+                <div class="detail-content">
+                    <span class="detail-close" onclick="closeDetailModal()">&times;</span>
+                    <div id="detailInner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let analysisDatabase = {};
+        let currentData = null;
+        let currentUser = null;
+        let apiStatus = {};
+
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            checkAPIStatus();
+        });
+
+        async function checkAPIStatus() {
+            try {
+                const response = await fetch('/api/status');
+                apiStatus = await response.json();
+
+                const bar = document.getElementById('apiStatusBar');
+                bar.innerHTML = '';
+
+                // Display Google API status first
+                if (apiStatus.pagespeed) {
+                    const status = apiStatus.pagespeed;
+                    const statusText = status.status || 'unknown';
+                    const dotClass = statusText === 'operational' ? 'status-operational' :
+                                    statusText === 'degraded' ? 'status-degraded' : 'status-down';
+                    bar.innerHTML += `<div class="api-status"><span class="status-dot ${dotClass}"></span> pagespeed</div>`;
+                }
+
+                if (apiStatus.safebrowsing) {
+                    const status = apiStatus.safebrowsing;
+                    const statusText = status.status || 'unknown';
+                    const dotClass = statusText === 'operational' ? 'status-operational' :
+                                    statusText === 'degraded' ? 'status-degraded' : 'status-down';
+                    bar.innerHTML += `<div class="api-status"><span class="status-dot ${dotClass}"></span> safebrowsing</div>`;
+                }
+
+                // Display OpenAI status
+                if (apiStatus.openai) {
+                    const status = apiStatus.openai;
+                    const statusText = status.status || 'unknown';
+                    const dotClass = statusText === 'operational' ? 'status-operational' :
+                                    statusText === 'degraded' ? 'status-degraded' : 'status-down';
+                    bar.innerHTML += `<div class="api-status"><span class="status-dot ${dotClass}"></span> openai (image)</div>`;
+                }
+
+                // Display AI provider status
+                if (apiStatus.groq) {
+                    const status = apiStatus.groq;
+                    const statusText = status.status || 'unknown';
+                    const dotClass = statusText === 'operational' ? 'status-operational' :
+                                    statusText === 'degraded' ? 'status-degraded' : 'status-down';
+                    bar.innerHTML += `<div class="api-status"><span class="status-dot ${dotClass}"></span> groq (primary AI)</div>`;
+                }
+
+                if (apiStatus.openrouter) {
+                    const status = apiStatus.openrouter;
+                    const statusText = status.status || 'unknown';
+                    const dotClass = statusText === 'operational' ? 'status-operational' :
+                                    statusText === 'degraded' ? 'status-degraded' : 'status-down';
+                    bar.innerHTML += `<div class="api-status"><span class="status-dot ${dotClass}"></span> openrouter</div>`;
+                }
+
+                // Display data APIs
+                if (apiStatus.apify) {
+                    const status = apiStatus.apify;
+                    const statusText = status.status || 'unknown';
+                    const dotClass = statusText === 'operational' ? 'status-operational' :
+                                    statusText === 'degraded' ? 'status-degraded' : 'status-down';
+                    bar.innerHTML += `<div class="api-status"><span class="status-dot ${dotClass}"></span> apify</div>`;
+                }
+
+                if (apiStatus.apyhub) {
+                    const status = apiStatus.apyhub;
+                    const statusText = status.status || 'unknown';
+                    const dotClass = statusText === 'operational' ? 'status-operational' :
+                                    statusText === 'degraded' ? 'status-degraded' : 'status-down';
+                    bar.innerHTML += `<div class="api-status"><span class="status-dot ${dotClass}"></span> apyhub</div>`;
+                }
+
+                if (apiStatus.fetchserp) {
+                    const status = apiStatus.fetchserp;
+                    const statusText = status.status || 'unknown';
+                    const dotClass = statusText === 'operational' ? 'status-operational' :
+                                    statusText === 'degraded' ? 'status-degraded' : 'status-down';
+                    bar.innerHTML += `<div class="api-status"><span class="status-dot ${dotClass}"></span> fetchserp</div>`;
+                }
+
+                // Display other APIs
+                if (apiStatus.pixazo) {
+                    const status = apiStatus.pixazo;
+                    const statusText = status.status || 'unknown';
+                    const dotClass = statusText === 'operational' ? 'status-operational' :
+                                    statusText === 'degraded' ? 'status-degraded' : 'status-down';
+                    bar.innerHTML += `<div class="api-status"><span class="status-dot ${dotClass}"></span> pixazo</div>`;
+                }
+            } catch (e) {}
+        }
+
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/auth/status');
+                const data = await response.json();
+
+                if (data.authenticated) {
+                    currentUser = data.user;
+                    updateAuthUI(true, data.user);
+                } else {
+                    updateAuthUI(false);
+                }
+            } catch (e) {
+                updateAuthUI(false);
+            }
+        }
+
+        function updateAuthUI(authenticated, user = null) {
+            const authDisplay = document.getElementById('authDisplay');
+            const sidebarAvatar = document.getElementById('sidebarAvatar');
+            const sidebarName = document.getElementById('sidebarName');
+            const sidebarEmail = document.getElementById('sidebarEmail');
+            const sidebarAuthBtn = document.getElementById('sidebarAuthBtn');
+
+            if (authenticated && user) {
+                authDisplay.innerHTML = `
+                    <div class="user-profile">
+                        <img src="${user.picture}" class="profile-pic">
+                        <span>${user.name}</span>
+                        <button class="auth-btn" onclick="logout()">Sign Out</button>
+                    </div>
+                `;
+                sidebarAvatar.innerHTML = `<img src="${user.picture}">`;
+                sidebarName.textContent = user.name;
+                sidebarEmail.textContent = user.email;
+                sidebarAuthBtn.textContent = 'Sign Out';
+                sidebarAuthBtn.onclick = logout;
+            } else {
+                authDisplay.innerHTML = `<button class="auth-btn" onclick="login()">Sign In</button>`;
+                sidebarAvatar.innerHTML = '👤';
+                sidebarName.textContent = 'Guest';
+                sidebarEmail.textContent = 'Sign in';
+                sidebarAuthBtn.textContent = 'Sign In';
+                sidebarAuthBtn.onclick = login;
+            }
+        }
+
+        function login() { window.location.href = '/api/auth/login'; }
+        function logout() { window.location.href = '/api/auth/logout'; }
+        function handleAuth() { currentUser ? logout() : login(); }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            document.getElementById('audit-tab').style.display = 'block';
+        }
+
+        // History functions
+        async function showHistoryModal() {
+            const modal = document.getElementById('historyModal');
+            const list = document.getElementById('historyList');
+
+            if (!currentUser) {
+                list.innerHTML = '<div class="history-item">Please sign in to view history</div>';
+                modal.classList.add('active');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/user/history');
+                const data = await response.json();
+
+                if (data.history && data.history.length) {
+                    list.innerHTML = data.history.map(item => `
+                        <div class="history-item">
+                            <div style="font-weight: 600;">${item.url}</div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+                                <span>Score: ${item.overall}/100</span>
+                                <span>ROI: ${item.estimated_roi || 0}%</span>
+                                <span>📊 ${item.item_count || 115} checks</span>
+                                <span style="color: var(--text-secondary);">${new Date(item.timestamp).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div class="history-item">No audit history yet</div>';
+                }
+            } catch (e) {
+                list.innerHTML = '<div class="history-item">Error loading history</div>';
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeHistoryModal() { document.getElementById('historyModal').classList.remove('active'); }
+
+        // Alerts functions
+        async function showAlertsModal() {
+            const modal = document.getElementById('alertsModal');
+            const list = document.getElementById('alertsList');
+
+            if (!currentUser) {
+                list.innerHTML = '<div class="history-item">Please sign in to manage alerts</div>';
+                modal.classList.add('active');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/user/alerts');
+                const data = await response.json();
+
+                if (data.alerts && data.alerts.length) {
+                    list.innerHTML = data.alerts.map(alert => `
+                        <div class="history-item">
+                            <div style="font-weight: 600;">${alert.url}</div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+                                <span>Condition: ${alert.condition}</span>
+                                <span>Threshold: ${alert.threshold}</span>
+                                <button class="auth-btn" onclick="deleteAlert('${alert.id}')" style="padding: 0.2rem 1rem;">Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div class="history-item">No active alerts</div>';
+                }
+            } catch (e) {
+                list.innerHTML = '<div class="history-item">Error loading alerts</div>';
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeAlertsModal() { document.getElementById('alertsModal').classList.remove('active'); }
+
+        async function createAlert() {
+            const url = document.getElementById('alertUrl').value;
+            const condition = document.getElementById('alertCondition').value;
+            const threshold = document.getElementById('alertThreshold').value;
+
+            if (!url || !threshold) {
+                alert('Please fill all fields');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/user/alert', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url, condition, threshold})
+                });
+
+                if (response.ok) {
+                    alert('Alert created successfully');
+                    closeAlertsModal();
+                }
+            } catch (e) {
+                alert('Error creating alert');
+            }
+        }
+
+        async function deleteAlert(alertId) {
+            try {
+                const response = await fetch(`/api/user/alert/${alertId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showAlertsModal();
+                }
+            } catch (e) {
+                alert('Error deleting alert');
+            }
+        }
+
+        // Feature functions
+        async function showFeature(feature) {
+            const modal = document.getElementById('featureModal');
+            const content = document.getElementById('featureContent');
+            const url = document.getElementById('url').value;
+
+            if (!url || url === 'https://example.com') {
+                alert('Please enter a valid URL first');
+                return;
+            }
+
+            content.innerHTML = '<div class="loading" style="margin: 2rem auto;"></div>';
+            modal.classList.add('active');
+
+            try {
+                let response;
+                if (feature === 'performance') {
+                    response = await fetch('/api/performance/timeline', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({url})
+                    });
+                    const data = await response.json();
+                    content.innerHTML = `
+                        <h2>Performance Timeline</h2>
+                        <p>30-day performance trend for ${url}</p>
+                        <div style="margin-top: 2rem;">
+                            ${data.timeline.map(day => `
+                                <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                                    <span style="width: 100px;">${day.date}</span>
+                                    <div style="flex: 1; height: 20px; background: rgba(44,44,46,0.8); border-radius: 10px; margin: 0 1rem;">
+                                        <div style="width: ${day.score}%; height: 100%; background: ${getScoreColor(day.score)}; border-radius: 10px;"></div>
+                                    </div>
+                                    <span>${day.score}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else if (feature === 'security') {
+                    response = await fetch('/api/security/scan', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({url})
+                    });
+                    const data = await response.json();
+                    content.innerHTML = `
+                        <h2>Security Scan Results</h2>
+                        <div style="margin-top: 2rem;">
+                            <h3>Headers</h3>
+                            ${Object.entries(data.headers).map(([key, value]) => `
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <span>${key}</span>
+                                    <span class="${value ? 'budget-pass' : 'budget-fail'}">${value ? '✓' : '✗'}</span>
+                                </div>
+                            `).join('')}
+
+                            <h3 style="margin-top: 1.5rem;">SSL</h3>
+                            <div>Valid: ${data.ssl.valid ? '✓' : '✗'}</div>
+                            <div>Days Left: ${data.ssl.days_left}</div>
+                            <div>Issuer: ${data.ssl.issuer}</div>
+                            <div>Protocol: ${data.ssl.protocol}</div>
+
+                            <h3 style="margin-top: 1.5rem;">Vulnerabilities</h3>
+                            ${data.vulnerabilities.map(v => `
+                                <div class="priority-item priority-${v.severity}">
+                                    <div>${v.name}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Severity: ${v.severity}</div>
+                                </div>
+                            `).join('')}
+
+                            <h3 style="margin-top: 1.5rem;">Recommendations</h3>
+                            <ul>
+                                ${data.recommendations.map(r => `<li>${r}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                } else if (feature === 'seo') {
+                    response = await fetch('/api/seo/optimize', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({url})
+                    });
+                    const data = await response.json();
+                    content.innerHTML = `
+                        <h2>SEO Optimization Suggestions</h2>
+                        <div style="margin-top: 2rem;">
+                            <h3>Title</h3>
+                            <div>Current: ${data.title.current}</div>
+                            <div>Suggested: ${data.title.suggested}</div>
+                            <div style="color: var(--text-secondary);">${data.title.reason}</div>
+
+                            <h3 style="margin-top: 1.5rem;">Description</h3>
+                            <div>Current: ${data.description.current || 'Missing'}</div>
+                            <div>Suggested: ${data.description.suggested}</div>
+
+                            <h3 style="margin-top: 1.5rem;">Headings</h3>
+                            <div>Issues:</div>
+                            <ul>
+                                ${data.headings.issues.map(i => `<li>${i}</li>`).join('')}
+                            </ul>
+
+                            <h3 style="margin-top: 1.5rem;">Content Quality Score: ${data.content_quality.score}</h3>
+                            <div>Issues: ${data.content_quality.issues.join(', ')}</div>
+
+                            <h3 style="margin-top: 1.5rem;">Recommended Keywords</h3>
+                            <div class="category-items-preview">
+                                ${data.keywords.map(k => `<span class="item-pill">${k}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                } else if (feature === 'accessibility') {
+                    response = await fetch('/api/accessibility/check', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({url})
+                    });
+                    const data = await response.json();
+                    content.innerHTML = `
+                        <h2>Accessibility Audit</h2>
+                        <div style="margin-top: 2rem;">
+                            <div class="score-circle" style="margin: 0 auto 2rem;">
+                                <span>${data.score}</span>
+                                <small>/100</small>
+                            </div>
+                            <div>WCAG Level: ${data.wcag_level}</div>
+                            <div>Passed: ${data.passed} | Failed: ${data.failed}</div>
+
+                            <h3 style="margin-top: 1.5rem;">Issues Found</h3>
+                            ${data.issues.map(issue => `
+                                <div class="priority-item priority-${issue.impact}">
+                                    <div>${issue.description}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Impact: ${issue.impact}</div>
+                                </div>
+                            `).join('')}
+
+                            <h3 style="margin-top: 1.5rem;">Recommendations</h3>
+                            <ul>
+                                ${data.recommendations.map(r => `<li>${r}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                } else if (feature === 'business') {
+                    response = await fetch('/api/business/intelligence', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({url})
+                    });
+                    const data = await response.json();
+                    content.innerHTML = `
+                        <h2>Business Intelligence</h2>
+                        <div style="margin-top: 2rem;">
+                            <h3>Trust Signals Score: ${data.trust_signals.score}</h3>
+                            <div class="category-items-preview">
+                                ${Object.entries(data.trust_signals).filter(([k]) => k !== 'score').map(([k, v]) => `
+                                    <span class="item-pill">${k}: ${v ? '✓' : '✗'}</span>
+                                `).join('')}
+                            </div>
+
+                            <h3 style="margin-top: 1.5rem;">Conversion Factors</h3>
+                            ${Object.entries(data.conversion_factors).map(([k, v]) => `
+                                <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                                    <span style="width: 120px;">${k}</span>
+                                    <div style="flex: 1; height: 20px; background: rgba(44,44,46,0.8); border-radius: 10px; margin: 0 1rem;">
+                                        <div style="width: ${v}%; height: 100%; background: ${getScoreColor(v)}; border-radius: 10px;"></div>
+                                    </div>
+                                    <span>${v}%</span>
+                                </div>
+                            `).join('')}
+
+                            <h3 style="margin-top: 1.5rem;">Competitor Analysis</h3>
+                            <div>Market Position: ${data.competitor_analysis.market_position}</div>
+                            <div>Strengths: ${data.competitor_analysis.strengths.join(', ')}</div>
+                            <div>Weaknesses: ${data.competitor_analysis.weaknesses.join(', ')}</div>
+                            <div>Opportunities: ${data.competitor_analysis.opportunities.join(', ')}</div>
+
+                            <h3 style="margin-top: 1.5rem;">ROI Projection</h3>
+                            <div>Traffic Potential: ${data.roi_projection.traffic_potential}</div>
+                            <div>Conversion Potential: ${data.roi_projection.conversion_potential}</div>
+                            <div>Revenue Impact: ${data.roi_projection.revenue_impact}</div>
+                            <div>Timeframe: ${data.roi_projection.timeframe}</div>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                content.innerHTML = '<div class="history-item">Error loading feature</div>';
+            }
+        }
+
+        function closeFeatureModal() { document.getElementById('featureModal').classList.remove('active'); }
+
+        function getScoreColor(score) {
+            if (score >= 80) return '#30D158';
+            if (score >= 50) return '#FFD60A';
+            return '#FF453A';
+        }
+
+        async function startAudit() {
+            const url = document.getElementById('url').value;
+            const btn = document.getElementById('auditBtn');
+            const status = document.getElementById('status');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Analyzing...';
+            status.innerHTML = 'Comprehensive analysis in progress...';
+
+            try {
+                const response = await fetch('/api/audit', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url: url})
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    status.innerHTML = 'Error: ' + data.error;
+                    return;
+                }
+
+                analysisDatabase = data.analysis_db || {};
+                currentData = data;
+                displayResults(data);
+                status.innerHTML = `✅ Complete. ${data.item_count || 115} items analyzed across 7 categories.`;
+
+            } catch (e) {
+                status.innerHTML = 'Error: ' + e.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Analyze';
+            }
+        }
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.style.display = 'block';
+
+            const score = data.overall || 0;
+            const scoreColor = getScoreColor(score);
+
+            let html = `
+                <div class="score-card">
+                    <div class="score-circle" style="background: conic-gradient(${scoreColor} 0deg ${score * 3.6}deg, rgba(44,44,46,0.8) ${score * 3.6}deg);">
+                        <span>${score}</span>
+                        <small>/100</small>
+                    </div>
+                    <div>
+                        <h2>Overall Health Score</h2>
+                        <div style="color: var(--text-secondary);">${data.url}</div>
+                        <div style="color: var(--primary);">📊 ${data.item_count || 115} checks completed</div>
+                        <div style="color: var(--text-secondary); font-size: 0.85rem;">🕒 ${new Date(data.timestamp).toLocaleString()}</div>
+                        ${data.estimated_roi ? `<div style="margin-top: 1rem; background: #30D158; color: #000; padding: 0.3rem 0.8rem; border-radius: 20px; display: inline-block;">📈 Potential ROI: ${data.estimated_roi}%</div>` : ''}
+                    </div>
+                </div>
+            `;
+
+            if (data.priority_items && data.priority_items.length) {
+                html += `
+                    <div class="priority-section">
+                        <h3 style="color: #FF453A;">⚠️ Priority Issues (${data.priority_items.length})</h3>
+                        <div class="priority-grid">
+                `;
+
+                data.priority_items.forEach(item => {
+                    const priorityClass = item.priority === 'critical' ? 'priority-critical' :
+                                        item.priority === 'high' ? 'priority-high' : 'priority-medium';
+
+                    const tooltip = `${item.details || ''}
+
+Impact: ${item.impact || ''}
+
+Fix time: ${item.time || 'Unknown'}`;
+
+                    html += `
+                        <div class="priority-item ${priorityClass}" data-tooltip="${tooltip.replace(/"/g, '&quot;')}">
+                            <div style="font-weight: 600;">${item.name}</div>
+                            <div style="color: ${getScoreColor(item.score)}; font-size: 1.2rem;">${item.score}</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">⏱️ ${item.time || 'Unknown'} · 💰 ${item.effort || 'medium'}</div>
+                        </div>
+                    `;
+                });
+
+                html += `</div></div>`;
+            }
+
+            if (data.performance_budget) {
+                const b = data.performance_budget;
+                html += `
+                    <div class="budget-grid">
+                        <div class="budget-item"><div>LCP</div><div class="${b.lcp.status === 'pass' ? 'budget-pass' : 'budget-fail'}">${(b.lcp.current/1000).toFixed(1)}s / ${b.lcp.target/1000}s</div></div>
+                        <div class="budget-item"><div>FID</div><div class="${b.fid.status === 'pass' ? 'budget-pass' : 'budget-fail'}">${b.fid.current}ms / ${b.fid.target}ms</div></div>
+                        <div class="budget-item"><div>CLS</div><div class="${b.cls.status === 'pass' ? 'budget-pass' : 'budget-fail'}">${b.cls.current} / ${b.cls.target}</div></div>
+                        <div class="budget-item"><div>TTFB</div><div class="${b.ttfb.status === 'pass' ? 'budget-pass' : 'budget-fail'}">${b.ttfb.current}ms / ${b.ttfb.target}ms</div></div>
+                    </div>
+                `;
+            }
+
+            if (data.ai_analysis) {
+                html += `<div class="ai-card"><h3 style="color: var(--primary);">AI Analysis</h3><div class="ai-content">${data.ai_analysis.replace(/\n/g, '<br>')}</div></div>`;
+            }
+
+            html += '<h2>Category Analysis (115+ checks across 7 categories)</h2><div class="categories-grid">';
+
+            data.categories.forEach(cat => {
+                const categoryItems = Object.entries(data.items || {})
+                    .filter(([key, value]) => analysisDatabase[key]?.category === cat.name.toLowerCase())
+                    .slice(0, 5)
+                    .map(([key, value]) => `<span class="item-pill">${analysisDatabase[key]?.name || key}</span>`)
+                    .join('');
+
+                html += `
+                    <div class="category-card" onclick='showCategoryDetails("${cat.name}", ${JSON.stringify(data.items)})'>
+                        <div class="category-header">
+                            <h3>${cat.icon} ${cat.name}</h3>
+                            <span class="category-count">${cat.count} checks</span>
+                        </div>
+                        <div class="category-score">${cat.score}<small>/100</small></div>
+                        <div class="progress-bar"><div class="progress-fill" style="width: ${cat.score}%; background: ${getScoreColor(cat.score)};"></div></div>
+                        <div class="category-items-preview">
+                            ${categoryItems}
+                            <span class="item-pill">+ more</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+
+            html += `
+                <div class="action-bar">
+                    <button class="btn" onclick="exportJSON()">📥 Export JSON</button>
+                    <button class="btn" onclick="exportCSV()">📊 Export CSV</button>
+                </div>
+            `;
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function showCategoryDetails(categoryName, items) {
+            const categoryKeys = {
+                'Performance': ['lcp', 'fid', 'cls', 'ttfb', 'fcp', 'si', 'tbt', 'tti', 'performance_score', 'dom_size', 'request_count', 'page_size', 'render_blocking'],
+                'Security': ['ssl_days_left', 'tls_version', 'hsts', 'csp', 'xfo', 'xss_protection', 'content_type', 'referrer_policy', 'cookies_secure', 'cookies_httponly', 'cookies_samesite'],
+                'Safety': ['malware_detected', 'phishing_detected', 'unwanted_software', 'harmful_apps', 'social_engineering', 'safe_browsing_score', 'blacklist_status'],
+                'Infrastructure': ['dns_time_ms', 'server_response_time', 'http_version', 'cdn_detected', 'compression', 'ipv6_support', 'uptime', 'redundancy', 'load_balancing', 'http2_enabled', 'tls13_enabled', 'ocsp_stapling', 'hsts_preload'],
+                'SEO': ['title_present', 'title_length', 'meta_description_present', 'meta_description_length', 'viewport_present', 'lang_present', 'h1_count', 'h2_count', 'h3_count', 'alt_percentage', 'schema_present', 'schema_type', 'robots_exists', 'sitemap_exists', 'canonical_present', 'og_tags_present', 'twitter_cards', 'favicon_present', 'keywords_meta'],
+                'Accessibility': ['lang_attribute', 'aria_count', 'skip_link_present', 'heading_structure', 'alt_text_present', 'alt_text_quality', 'form_labels', 'color_contrast', 'focus_visible', 'aria_roles', 'aria_labels', 'video_captions', 'audio_transcripts', 'table_headers', 'table_caption'],
+                'Business': ['contact_info', 'cta_count', 'cta_visibility', 'privacy_policy', 'terms_of_service', 'about_page', 'social_links', 'trust_badges', 'testimonials', 'pricing_visible', 'faq_page', 'blog_present', 'newsletter', 'live_chat', 'return_policy']
+            };
+
+            let keys = categoryKeys[categoryName] || [];
+            let html = `<h2>${categoryName} (${keys.length} checks)</h2><div class="items-grid">`;
+
+            Object.entries(items).forEach(([key, value]) => {
+                if (keys.includes(key)) {
+                    const info = analysisDatabase[key] || {
+                        name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                        description: 'No description'
+                    };
+
+                    let valueClass = value >= 80 ? 'good' : value >= 50 ? 'warning' : 'poor';
+                    let tooltip = `${info.details || info.description}
+
+Impact: ${info.impact || ''}
+
+Range: ${info.range || ''}
+
+Action: ${info.action || ''}`;
+
+                    html += `
+                        <div class="item-card" data-tooltip="${tooltip.replace(/"/g, '&quot;')}">
+                            <div class="item-header">
+                                <span class="item-name">${info.name}</span>
+                                <span class="${valueClass}">${value}</span>
+                            </div>
+                            <div class="item-description">${info.description || ''}</div>
+                        </div>
+                    `;
+                }
+            });
+
+            html += '</div>';
+            document.getElementById('detailInner').innerHTML = html;
+            document.getElementById('detailModal').classList.add('active');
+        }
+
+        function closeDetailModal() { document.getElementById('detailModal').classList.remove('active'); }
+
+        function exportJSON() {
+            if (!currentData) return;
+            const blob = new Blob([JSON.stringify(currentData, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `audit-${currentData.session_id || 'report'}.json`;
+            a.click();
+        }
+
+        function exportCSV() {
+            if (!currentData) return;
+            let csv = 'Item,Score,Priority,Action\n';
+            Object.entries(currentData.items).forEach(([key, value]) => {
+                const info = analysisDatabase[key] || {};
+                csv += `${key},${value},${info.priority || 'medium'},${(info.action || '').replace(/,/g, ';')}\n`;
+            });
+            const blob = new Blob([csv], {type: 'text/csv'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `audit-${currentData.session_id || 'report'}.csv`;
+            a.click();
+        }
+
+        window.onclick = function(e) {
+            if (e.target.classList.contains('detail-modal') ||
+                e.target.classList.contains('history-modal') ||
+                e.target.classList.contains('feature-modal')) {
+                e.target.classList.remove('active');
+            }
+        };
+    </script>
+</body>
+</html>
